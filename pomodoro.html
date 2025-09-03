@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>뽀모도로 · 일정 알림 — 아주 간단한 단일 HTML</title>
+  <style>
+    :root {
+      --bg: #0b1020; --panel: #121a33; --text: #e6ecff; --muted:#9fb1ff;
+      --accent:#6aa1ff; --accent2:#77ffb3; --danger:#ff7a7a; --ok:#77ffa0;
+    }
+    * { box-sizing: border-box; }
+    html, body { height:100%; }
+    body {
+      margin:0; background:linear-gradient(180deg, #0b1020, #0f1630 40%, #0b1020);
+      color:var(--text); font: 15px/1.5 system-ui, -apple-system, Segoe UI, Roboto, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+      display:flex; align-items:center; justify-content:center; padding:24px;
+    }
+    .app { width:clamp(320px, 90vw, 940px); display:grid; gap:16px; grid-template-columns: 1.1fr 1fr; }
+    @media (max-width: 860px) { .app { grid-template-columns: 1fr; } }
+
+    .card { background:rgba(18,26,51,.9); border:1px solid rgba(255,255,255,.06); border-radius:14px; padding:16px; box-shadow: 0 8px 30px rgba(0,0,0,.35); }
+    .card h2 { margin:0 0 10px; font-size:18px; color:#eaf1ff; letter-spacing:.2px; }
+    .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+    .grow { flex:1 1 auto; }
+    label { color:var(--muted); font-size:12px; }
+    input, select, button { appearance:none; border:none; outline:none; border-radius:10px; padding:10px 12px; font: inherit; }
+    input[type="number"], input[type="time"], input[type="text"] { background:#0f1530; color:var(--text); border:1px solid rgba(255,255,255,.08); }
+    input[type="time"] { width:130px; }
+    input[type="number"] { width:80px; }
+    input[type="text"] { min-width:120px; }
+    button { background: #253058; color: #eaf1ff; cursor: pointer; transition: .15s transform, .15s background, .15s opacity; }
+    button:hover { transform: translateY(-1px); background:#2b3a6f; }
+    button:active { transform: translateY(0); }
+    .ghost { background:transparent; border:1px dashed rgba(255,255,255,.18); color:var(--muted); }
+    .accent { background: linear-gradient(135deg, #2e58ff, #00c2ff 95%); color:#00152a; font-weight:600; }
+    .danger { background: #432028; color: #ffc7cf; }
+
+    .display {
+      display:flex; align-items:center; justify-content:center; gap:14px;
+      font-weight:700; letter-spacing:.5px; user-select:none; text-align:center;
+    }
+    .time {
+      font-size: clamp(42px, 7vw, 64px);
+      padding: 8px 14px; background: #0c1330; border:1px solid rgba(255,255,255,.05); border-radius:12px;
+      box-shadow: inset 0 0 0 1px rgba(106,161,255,.15);
+    }
+    .phase { font-size:12px; color:var(--accent2); text-transform:uppercase; letter-spacing:1.5px; }
+    .kpis { display:flex; gap:10px; color:var(--muted); font-size:12px; justify-content:center; }
+
+    .list { display:flex; flex-direction:column; gap:10px; margin-top:10px; }
+    .item { display:flex; align-items:center; gap:10px; background:#0e1633; border:1px solid rgba(255,255,255,.06); padding:10px; border-radius:10px; }
+    .item small { color:var(--muted); }
+    .item .badge { font-size:11px; padding:4px 8px; border-radius:8px; background:#1b2448; color:#a7b6ff; }
+    .item button { padding:8px 10px; }
+
+    .note { color:#b6c8ff; font-size:12px; opacity:.9; }
+    .muted { color:var(--muted); }
+    .title { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+    .title small { color:var(--muted); }
+  </style>
+</head>
+<body>
+  <main class="app" aria-label="Pomodoro & Schedule Reminder">
+    <!-- Pomodoro Card -->
+    <section class="card" id="pomodoro">
+      <div class="title">
+        <h2>뽀모도로 타이머</h2>
+        <small class="muted">단일 HTML · 오프라인 동작</small>
+      </div>
+
+      <div class="display" aria-live="polite">
+        <div class="phase" id="phase">작업</div>
+        <div class="time" id="clock">25:00</div>
+      </div>
+
+      <div class="kpis" id="kpis">완료 0회 • 4회마다 롱브레이크</div>
+
+      <div class="row" style="margin-top:10px">
+        <label>작업(분)
+          <input id="workM" type="number" min="1" value="25">
+        </label>
+        <label>짧은 휴식(분)
+          <input id="shortM" type="number" min="1" value="5">
+        </label>
+        <label>긴 휴식(분)
+          <input id="longM" type="number" min="1" value="15">
+        </label>
+        <label>롱 간격(회)
+          <input id="interval" type="number" min="2" value="4">
+        </label>
+        <button id="saveCfg" class="ghost">설정 저장</button>
+      </div>
+
+      <div class="row" style="margin-top:10px">
+        <button id="start" class="accent">시작</button>
+        <button id="pause">일시정지</button>
+        <button id="reset" class="ghost">리셋</button>
+        <button id="skip" class="ghost">지금 세션 건너뛰기</button>
+        <button id="testBeep" class="ghost">소리 테스트</button>
+      </div>
+
+      <p class="note">Tip: 스페이스바로 시작/일시정지. 페이지 제목에 남은 시간이 표시돼요. 세션 종료 시 짧은 비프음, 알림 권한 허용 시 브라우저 알림도 떠요.</p>
+    </section>
+
+    <!-- Schedule Card -->
+    <section class="card" id="schedule">
+      <div class="title">
+        <h2>일정 알림 (오늘 반복)</h2>
+        <small class="muted">페이지가 열려있어야 알림</small>
+      </div>
+
+      <div class="row" style="margin-bottom:8px">
+        <label>시간
+          <input id="atTime" type="time" required>
+        </label>
+        <label class="grow">메모
+          <input id="label" type="text" placeholder="회의 / 물 마시기 / 산책 등">
+        </label>
+        <button id="add" class="accent">추가</button>
+        <button id="testNotify" class="ghost">테스트 알림</button>
+      </div>
+
+      <div class="list" id="list" aria-live="polite"></div>
+    </section>
+  </main>
+
+  <script>
+    // ========== 공용 유틸 ==========
+    const $ = s => document.querySelector(s);
+    const pad = n => (n<10?'0':'') + n;
+    const todayKey = () => new Date().toISOString().slice(0,10); // YYYY-MM-DD
+
+    function notify(title, body) {
+      if ('Notification' in window) {
+        if (Notification.permission === 'granted') new Notification(title, { body });
+        else if (Notification.permission !== 'denied') Notification.requestPermission();
+      }
+      try { navigator.vibrate && navigator.vibrate([80, 40, 80]); } catch {}
+      alert(title + (body? '\n' + body : ''));
+    }
+
+    // 아주 짧은 비프음 (WebAudio) — 외부 파일 없이 구현
+    function beep(ms=180, freq=880) {
+      try {
+        const ac = new (window.AudioContext||window.webkitAudioContext)();
+        const o = ac.createOscillator(); const g = ac.createGain();
+        o.type='sine'; o.frequency.value=freq; o.connect(g); g.connect(ac.destination);
+        o.start(); g.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + ms/1000);
+        setTimeout(()=>{o.stop(); ac.close();}, ms+30);
+      } catch {}
+    }
+
+    // ========== 뽀모도로 ==========
+    const clock = $('#clock'), phaseEl=$('#phase'), kpis=$('#kpis');
+    const els = { workM:$('#workM'), shortM:$('#shortM'), longM:$('#longM'), interval:$('#interval') };
+
+    const state = {
+      running:false, phase:'work',
+      remainMs: 25*60*1000, done:0, tickId:null, since:null, cycle:0,
+    };
+
+    function loadCfg(){
+      const cfg = JSON.parse(localStorage.getItem('pomocfg')||'{}');
+      for (const k of ['workM','shortM','longM','interval']) if (cfg[k]) els[k].value = cfg[k];
+      state.remainMs = (Number(els.workM.value)||25)*60*1000; drawTimer();
+    }
+    function saveCfg(){
+      const cfg = { workM:els.workM.value, shortM:els.shortM.value, longM:els.longM.value, interval:els.interval.value };
+      localStorage.setItem('pomocfg', JSON.stringify(cfg));
+      notify('설정 저장됨', `${cfg.workM}분 작업 / ${cfg.shortM}분 휴식 / ${cfg.interval}회마다 ${cfg.longM}분`);
+      if (!state.running && state.phase==='work') { state.remainMs = cfg.workM*60*1000; drawTimer(); }
+    }
+
+    function drawTimer(){
+      const m = Math.max(0, Math.floor(state.remainMs/60000));
+      const s = Math.max(0, Math.floor((state.remainMs%60000)/1000));
+      clock.textContent = `${pad(m)}:${pad(s)}`;
+      phaseEl.textContent = state.phase==='work' ? '작업' : (state.phase==='short' ? '짧은 휴식' : '긴 휴식');
+      document.title = `${clock.textContent} · ${phaseEl.textContent}`;
+      const untilLong = (els.interval.value - (state.cycle % els.interval.value)) % els.interval.value || Number(els.interval.value);
+      kpis.textContent = `완료 ${state.done}회 • ${els.interval.value}회마다 롱브레이크 (다음: ${untilLong}회 후)`;
+    }
+
+    function start(){
+      if (state.running) return; state.running=true; $('#start').disabled=true; $('#pause').disabled=false;
+      state.since = performance.now();
+      state.tickId = setInterval(()=>{
+        const now = performance.now(); const dt = now - state.since; state.since = now; state.remainMs -= dt;
+        if (state.remainMs <= 0) { endSession(); } else drawTimer();
+      }, 250);
+    }
+    function pause(){ if(!state.running) return; state.running=false; clearInterval(state.tickId); $('#start').disabled=false; $('#pause').disabled=true; }
+    function reset(){ pause(); state.phase='work'; state.remainMs=(els.workM.value||25)*60*1000; drawTimer(); }
+    function skip(){ state.remainMs = 0; }
+
+    function endSession(){
+      clearInterval(state.tickId); state.running=false; $('#start').disabled=false; $('#pause').disabled=true; drawTimer();
+      beep(); notify('세션 종료', state.phase==='work' ? '수고했어요! 휴식을 시작해요.' : '휴식 끝! 다시 집중해요.');
+      if (state.phase==='work') { state.done++; state.cycle++; }
+      const longEvery = Number(els.interval.value)||4;
+      if (state.phase==='work' && state.cycle % longEvery === 0) nextPhase('long');
+      else if (state.phase==='work') nextPhase('short');
+      else nextPhase('work');
+      drawTimer();
+    }
+
+    function nextPhase(name){
+      state.phase=name;
+      const mins = name==='work' ? Number(els.workM.value)||25 : name==='short' ? Number(els.shortM.value)||5 : Number(els.longM.value)||15;
+      state.remainMs = mins*60*1000; start();
+    }
+
+    // Controls
+    $('#start').onclick=start; $('#pause').onclick=pause; $('#reset').onclick=reset; $('#skip').onclick=skip; $('#saveCfg').onclick=saveCfg; $('#testBeep').onclick=()=>beep();
+    addEventListener('keydown', e=>{ if(e.code==='Space'){ e.preventDefault(); (state.running?pause:start)(); }});
+
+    // 초기화
+    loadCfg(); drawTimer();
+
+    // ========== 일정 알림 ==========
+    const listEl = $('#list');
+    function loadRem(){ return JSON.parse(localStorage.getItem('reminders')||'[]'); }
+    function saveRem(list){ localStorage.setItem('reminders', JSON.stringify(list)); }
+
+    function minutesUntilNext(hhmm){
+      const [h,m] = hhmm.split(':').map(Number);
+      const now = new Date(); const t = new Date(); t.setHours(h,m,0,0);
+      let diff = Math.round((t-now)/60000);
+      if (diff < 0) diff += 24*60; // 내일
+      return diff;
+    }
+
+    function render(){
+      const data = loadRem().sort((a,b)=>a.time.localeCompare(b.time));
+      listEl.innerHTML = '';
+      if (!data.length) { listEl.innerHTML = '<div class="muted">아직 알림이 없어요. 위에서 시간을 추가해보세요.</div>'; return; }
+      for (const r of data){
+        const div = document.createElement('div'); div.className='item';
+        div.innerHTML = `
+          <div class="badge">${r.time}</div>
+          <div class="grow">
+            <div>${r.label||'알림'}</div>
+            <small>다음 알림까지 약 ${minutesUntilNext(r.time)}분 · 마지막 발동: ${r.lastFired || '—'}</small>
+          </div>
+          <button data-id="${r.id}" class="ghost toggle">${r.enabled?'켜짐':'꺼짐'}</button>
+          <button data-id="${r.id}" class="danger del">삭제</button>
+        `;
+        listEl.appendChild(div);
+      }
+      listEl.querySelectorAll('.del').forEach(b=>b.onclick = () => { const id=b.dataset.id; const a=loadRem().filter(x=>x.id!==id); saveRem(a); render(); });
+      listEl.querySelectorAll('.toggle').forEach(b=>b.onclick = () => { const id=b.dataset.id; const a=loadRem(); const it=a.find(x=>x.id===id); it.enabled=!it.enabled; saveRem(a); render(); });
+    }
+
+    function addReminder(){
+      const time = $('#atTime').value; if(!time) return alert('시간을 선택하세요.');
+      const label = $('#label').value.trim();
+      const list = loadRem();
+      list.push({ id: crypto.randomUUID(), time, label, enabled:true, lastFired:'' });
+      saveRem(list); $('#label').value=''; render();
+    }
+
+    function checkLoop(){
+      const now = new Date();
+      const hhmm = pad(now.getHours())+':'+pad(now.getMinutes());
+      const today = todayKey();
+      const list = loadRem(); let changed=false;
+      for (const r of list){
+        if (!r.enabled) continue;
+        if (r.time===hhmm && r.lastFired!==today){
+          notify('일정 알림', (r.label||r.time)); beep(200, 1000);
+          r.lastFired = today; changed = true;
+        }
+      }
+      if (changed) saveRem(list), render();
+    }
+
+    $('#add').onclick=addReminder;
+    $('#testNotify').onclick=()=>{ Notification?.requestPermission?.(); notify('테스트 알림', '정상 작동합니다.'); beep(); };
+
+    render();
+    setInterval(checkLoop, 15*1000); // 15초마다 체크 (분 단위 알림)
+  </script>
+
+  <!--
+  사용법 요약
+  1) 시간 입력 후 [추가] → 동일 시각마다 하루 1회 알림. (페이지 열림 필요)
+  2) 뽀모도로: [시작] → 작업/휴식 자동 전환, 4회마다 롱브레이크.
+  3) 설정 저장: 값 수정 후 [설정 저장].
+  4) 키보드: 스페이스바 시작/일시정지.
+  5) 데이터는 모두 localStorage에 저장됩니다.
+  -->
+</body>
+</html>
