@@ -1,295 +1,2604 @@
-@ -0,0 +1,294 @@
+<!-- /index.html -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>뽀모도로 · 일정 알림 — 아주 간단한 단일 HTML</title>
-  <style>
-    :root {
-      --bg: #0b1020; --panel: #121a33; --text: #e6ecff; --muted:#9fb1ff;
-      --accent:#6aa1ff; --accent2:#77ffb3; --danger:#ff7a7a; --ok:#77ffa0;
-    }
-    * { box-sizing: border-box; }
-    html, body { height:100%; }
-    body {
-      margin:0; background:linear-gradient(180deg, #0b1020, #0f1630 40%, #0b1020);
-      color:var(--text); font: 15px/1.5 system-ui, -apple-system, Segoe UI, Roboto, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
-      display:flex; align-items:center; justify-content:center; padding:24px;
-    }
-    .app { width:clamp(320px, 90vw, 940px); display:grid; gap:16px; grid-template-columns: 1.1fr 1fr; }
-    @media (max-width: 860px) { .app { grid-template-columns: 1fr; } }
-
-    .card { background:rgba(18,26,51,.9); border:1px solid rgba(255,255,255,.06); border-radius:14px; padding:16px; box-shadow: 0 8px 30px rgba(0,0,0,.35); }
-    .card h2 { margin:0 0 10px; font-size:18px; color:#eaf1ff; letter-spacing:.2px; }
-    .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
-    .grow { flex:1 1 auto; }
-    label { color:var(--muted); font-size:12px; }
-    input, select, button { appearance:none; border:none; outline:none; border-radius:10px; padding:10px 12px; font: inherit; }
-    input[type="number"], input[type="time"], input[type="text"] { background:#0f1530; color:var(--text); border:1px solid rgba(255,255,255,.08); }
-    input[type="time"] { width:130px; }
-    input[type="number"] { width:80px; }
-    input[type="text"] { min-width:120px; }
-    button { background: #253058; color: #eaf1ff; cursor: pointer; transition: .15s transform, .15s background, .15s opacity; }
-    button:hover { transform: translateY(-1px); background:#2b3a6f; }
-    button:active { transform: translateY(0); }
-    .ghost { background:transparent; border:1px dashed rgba(255,255,255,.18); color:var(--muted); }
-    .accent { background: linear-gradient(135deg, #2e58ff, #00c2ff 95%); color:#00152a; font-weight:600; }
-    .danger { background: #432028; color: #ffc7cf; }
-
-    .display {
-      display:flex; align-items:center; justify-content:center; gap:14px;
-      font-weight:700; letter-spacing:.5px; user-select:none; text-align:center;
-    }
-    .time {
-      font-size: clamp(42px, 7vw, 64px);
-      padding: 8px 14px; background: #0c1330; border:1px solid rgba(255,255,255,.05); border-radius:12px;
-      box-shadow: inset 0 0 0 1px rgba(106,161,255,.15);
-    }
-    .phase { font-size:12px; color:var(--accent2); text-transform:uppercase; letter-spacing:1.5px; }
-    .kpis { display:flex; gap:10px; color:var(--muted); font-size:12px; justify-content:center; }
-
-    .list { display:flex; flex-direction:column; gap:10px; margin-top:10px; }
-    .item { display:flex; align-items:center; gap:10px; background:#0e1633; border:1px solid rgba(255,255,255,.06); padding:10px; border-radius:10px; }
-    .item small { color:var(--muted); }
-    .item .badge { font-size:11px; padding:4px 8px; border-radius:8px; background:#1b2448; color:#a7b6ff; }
-    .item button { padding:8px 10px; }
-
-    .note { color:#b6c8ff; font-size:12px; opacity:.9; }
-    .muted { color:var(--muted); }
-    .title { display:flex; align-items:center; justify-content:space-between; gap:10px; }
-    .title small { color:var(--muted); }
-  </style>
-</head>
-<body>
-  <main class="app" aria-label="Pomodoro & Schedule Reminder">
-    <!-- Pomodoro Card -->
-    <section class="card" id="pomodoro">
-      <div class="title">
-        <h2>뽀모도로 타이머</h2>
-        <small class="muted">단일 HTML · 오프라인 동작</small>
-      </div>
-
-      <div class="display" aria-live="polite">
-        <div class="phase" id="phase">작업</div>
-        <div class="time" id="clock">25:00</div>
-      </div>
-
-      <div class="kpis" id="kpis">완료 0회 • 4회마다 롱브레이크</div>
-
-      <div class="row" style="margin-top:10px">
-        <label>작업(분)
-          <input id="workM" type="number" min="1" value="25">
-        </label>
-        <label>짧은 휴식(분)
-          <input id="shortM" type="number" min="1" value="5">
-        </label>
-        <label>긴 휴식(분)
-          <input id="longM" type="number" min="1" value="15">
-        </label>
-        <label>롱 간격(회)
-          <input id="interval" type="number" min="2" value="4">
-        </label>
-        <button id="saveCfg" class="ghost">설정 저장</button>
-      </div>
-
-      <div class="row" style="margin-top:10px">
-        <button id="start" class="accent">시작</button>
-        <button id="pause">일시정지</button>
-        <button id="reset" class="ghost">리셋</button>
-        <button id="skip" class="ghost">지금 세션 건너뛰기</button>
-        <button id="testBeep" class="ghost">소리 테스트</button>
-      </div>
-
-      <p class="note">Tip: 스페이스바로 시작/일시정지. 페이지 제목에 남은 시간이 표시돼요. 세션 종료 시 짧은 비프음, 알림 권한 허용 시 브라우저 알림도 떠요.</p>
-    </section>
-
-    <!-- Schedule Card -->
-    <section class="card" id="schedule">
-      <div class="title">
-        <h2>일정 알림 (오늘 반복)</h2>
-        <small class="muted">페이지가 열려있어야 알림</small>
-      </div>
-
-      <div class="row" style="margin-bottom:8px">
-        <label>시간
-          <input id="atTime" type="time" required>
-        </label>
-        <label class="grow">메모
-          <input id="label" type="text" placeholder="회의 / 물 마시기 / 산책 등">
-        </label>
-        <button id="add" class="accent">추가</button>
-        <button id="testNotify" class="ghost">테스트 알림</button>
-      </div>
-
-      <div class="list" id="list" aria-live="polite"></div>
-    </section>
-  </main>
-
-  <script>
-    // ========== 공용 유틸 ==========
-    const $ = s => document.querySelector(s);
-    const pad = n => (n<10?'0':'') + n;
-    const todayKey = () => new Date().toISOString().slice(0,10); // YYYY-MM-DD
-
-    function notify(title, body) {
-      if ('Notification' in window) {
-        if (Notification.permission === 'granted') new Notification(title, { body });
-        else if (Notification.permission !== 'denied') Notification.requestPermission();
-      }
-      try { navigator.vibrate && navigator.vibrate([80, 40, 80]); } catch {}
-      alert(title + (body? '\n' + body : ''));
-    }
-
-    // 아주 짧은 비프음 (WebAudio) — 외부 파일 없이 구현
-    function beep(ms=180, freq=880) {
-      try {
-        const ac = new (window.AudioContext||window.webkitAudioContext)();
-        const o = ac.createOscillator(); const g = ac.createGain();
-        o.type='sine'; o.frequency.value=freq; o.connect(g); g.connect(ac.destination);
-        o.start(); g.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + ms/1000);
-        setTimeout(()=>{o.stop(); ac.close();}, ms+30);
-      } catch {}
-    }
-
-    // ========== 뽀모도로 ==========
-    const clock = $('#clock'), phaseEl=$('#phase'), kpis=$('#kpis');
-    const els = { workM:$('#workM'), shortM:$('#shortM'), longM:$('#longM'), interval:$('#interval') };
-
-    const state = {
-      running:false, phase:'work',
-      remainMs: 25*60*1000, done:0, tickId:null, since:null, cycle:0,
-    };
-
-    function loadCfg(){
-      const cfg = JSON.parse(localStorage.getItem('pomocfg')||'{}');
-      for (const k of ['workM','shortM','longM','interval']) if (cfg[k]) els[k].value = cfg[k];
-      state.remainMs = (Number(els.workM.value)||25)*60*1000; drawTimer();
-    }
-    function saveCfg(){
-      const cfg = { workM:els.workM.value, shortM:els.shortM.value, longM:els.longM.value, interval:els.interval.value };
-      localStorage.setItem('pomocfg', JSON.stringify(cfg));
-      notify('설정 저장됨', `${cfg.workM}분 작업 / ${cfg.shortM}분 휴식 / ${cfg.interval}회마다 ${cfg.longM}분`);
-      if (!state.running && state.phase==='work') { state.remainMs = cfg.workM*60*1000; drawTimer(); }
-    }
-
-    function drawTimer(){
-      const m = Math.max(0, Math.floor(state.remainMs/60000));
-      const s = Math.max(0, Math.floor((state.remainMs%60000)/1000));
-      clock.textContent = `${pad(m)}:${pad(s)}`;
-      phaseEl.textContent = state.phase==='work' ? '작업' : (state.phase==='short' ? '짧은 휴식' : '긴 휴식');
-      document.title = `${clock.textContent} · ${phaseEl.textContent}`;
-      const untilLong = (els.interval.value - (state.cycle % els.interval.value)) % els.interval.value || Number(els.interval.value);
-      kpis.textContent = `완료 ${state.done}회 • ${els.interval.value}회마다 롱브레이크 (다음: ${untilLong}회 후)`;
-    }
-
-    function start(){
-      if (state.running) return; state.running=true; $('#start').disabled=true; $('#pause').disabled=false;
-      state.since = performance.now();
-      state.tickId = setInterval(()=>{
-        const now = performance.now(); const dt = now - state.since; state.since = now; state.remainMs -= dt;
-        if (state.remainMs <= 0) { endSession(); } else drawTimer();
-      }, 250);
-    }
-    function pause(){ if(!state.running) return; state.running=false; clearInterval(state.tickId); $('#start').disabled=false; $('#pause').disabled=true; }
-    function reset(){ pause(); state.phase='work'; state.remainMs=(els.workM.value||25)*60*1000; drawTimer(); }
-    function skip(){ state.remainMs = 0; }
-
-    function endSession(){
-      clearInterval(state.tickId); state.running=false; $('#start').disabled=false; $('#pause').disabled=true; drawTimer();
-      beep(); notify('세션 종료', state.phase==='work' ? '수고했어요! 휴식을 시작해요.' : '휴식 끝! 다시 집중해요.');
-      if (state.phase==='work') { state.done++; state.cycle++; }
-      const longEvery = Number(els.interval.value)||4;
-      if (state.phase==='work' && state.cycle % longEvery === 0) nextPhase('long');
-      else if (state.phase==='work') nextPhase('short');
-      else nextPhase('work');
-      drawTimer();
-    }
-
-    function nextPhase(name){
-      state.phase=name;
-      const mins = name==='work' ? Number(els.workM.value)||25 : name==='short' ? Number(els.shortM.value)||5 : Number(els.longM.value)||15;
-      state.remainMs = mins*60*1000; start();
-    }
-
-    // Controls
-    $('#start').onclick=start; $('#pause').onclick=pause; $('#reset').onclick=reset; $('#skip').onclick=skip; $('#saveCfg').onclick=saveCfg; $('#testBeep').onclick=()=>beep();
-    addEventListener('keydown', e=>{ if(e.code==='Space'){ e.preventDefault(); (state.running?pause:start)(); }});
-
-    // 초기화
-    loadCfg(); drawTimer();
-
-    // ========== 일정 알림 ==========
-    const listEl = $('#list');
-    function loadRem(){ return JSON.parse(localStorage.getItem('reminders')||'[]'); }
-    function saveRem(list){ localStorage.setItem('reminders', JSON.stringify(list)); }
-
-    function minutesUntilNext(hhmm){
-      const [h,m] = hhmm.split(':').map(Number);
-      const now = new Date(); const t = new Date(); t.setHours(h,m,0,0);
-      let diff = Math.round((t-now)/60000);
-      if (diff < 0) diff += 24*60; // 내일
-      return diff;
-    }
-
-    function render(){
-      const data = loadRem().sort((a,b)=>a.time.localeCompare(b.time));
-      listEl.innerHTML = '';
-      if (!data.length) { listEl.innerHTML = '<div class="muted">아직 알림이 없어요. 위에서 시간을 추가해보세요.</div>'; return; }
-      for (const r of data){
-        const div = document.createElement('div'); div.className='item';
-        div.innerHTML = `
-          <div class="badge">${r.time}</div>
-          <div class="grow">
-            <div>${r.label||'알림'}</div>
-            <small>다음 알림까지 약 ${minutesUntilNext(r.time)}분 · 마지막 발동: ${r.lastFired || '—'}</small>
-          </div>
-          <button data-id="${r.id}" class="ghost toggle">${r.enabled?'켜짐':'꺼짐'}</button>
-          <button data-id="${r.id}" class="danger del">삭제</button>
-        `;
-        listEl.appendChild(div);
-      }
-      listEl.querySelectorAll('.del').forEach(b=>b.onclick = () => { const id=b.dataset.id; const a=loadRem().filter(x=>x.id!==id); saveRem(a); render(); });
-      listEl.querySelectorAll('.toggle').forEach(b=>b.onclick = () => { const id=b.dataset.id; const a=loadRem(); const it=a.find(x=>x.id===id); it.enabled=!it.enabled; saveRem(a); render(); });
-    }
-
-    function addReminder(){
-      const time = $('#atTime').value; if(!time) return alert('시간을 선택하세요.');
-      const label = $('#label').value.trim();
-      const list = loadRem();
-      list.push({ id: crypto.randomUUID(), time, label, enabled:true, lastFired:'' });
-      saveRem(list); $('#label').value=''; render();
-    }
-
-    function checkLoop(){
-      const now = new Date();
-      const hhmm = pad(now.getHours())+':'+pad(now.getMinutes());
-      const today = todayKey();
-      const list = loadRem(); let changed=false;
-      for (const r of list){
-        if (!r.enabled) continue;
-        if (r.time===hhmm && r.lastFired!==today){
-          notify('일정 알림', (r.label||r.time)); beep(200, 1000);
-          r.lastFired = today; changed = true;
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Personal Dashboard Hub</title>
+    <style>
+        /* CSS Reset */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
-      }
-      if (changed) saveRem(list), render();
-    }
 
-    $('#add').onclick=addReminder;
-    $('#testNotify').onclick=()=>{ Notification?.requestPermission?.(); notify('테스트 알림', '정상 작동합니다.'); beep(); };
+        /* CSS Variables for Themes */
+        :root {
+            --primary-bg: #ffffff;
+            --secondary-bg: #f8fafc;
+            --sidebar-bg: #1e293b;
+            --header-bg: #334155;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-light: #ffffff;
+            --border-color: #e2e8f0;
+            --accent-blue: #3b82f6;
+            --accent-green: #10b981;
+            --accent-red: #ef4444;
+            --accent-yellow: #f59e0b;
+            --accent-purple: #8b5cf6;
+            --shadow: rgba(0, 0, 0, 0.1);
+        }
 
-    render();
-    setInterval(checkLoop, 15*1000); // 15초마다 체크 (분 단위 알림)
-  </script>
+        [data-theme="dark"] {
+            --primary-bg: #0f172a;
+            --secondary-bg: #1e293b;
+            --sidebar-bg: #334155;
+            --header-bg: #475569;
+            --text-primary: #f1f5f9;
+            --text-secondary: #cbd5e1;
+            --border-color: #475569;
+            --shadow: rgba(0, 0, 0, 0.3);
+        }
 
-  <!--
-  사용법 요약
-  1) 시간 입력 후 [추가] → 동일 시각마다 하루 1회 알림. (페이지 열림 필요)
-  2) 뽀모도로: [시작] → 작업/휴식 자동 전환, 4회마다 롱브레이크.
-  3) 설정 저장: 값 수정 후 [설정 저장].
-  4) 키보드: 스페이스바 시작/일시정지.
-  5) 데이터는 모두 localStorage에 저장됩니다.
-  -->
+        [data-theme="blue"] {
+            --primary-bg: #eff6ff;
+            --secondary-bg: #dbeafe;
+            --sidebar-bg: #1e40af;
+            --header-bg: #2563eb;
+            --accent-blue: #1d4ed8;
+        }
+
+        [data-theme="green"] {
+            --primary-bg: #f0fdf4;
+            --secondary-bg: #dcfce7;
+            --sidebar-bg: #166534;
+            --header-bg: #16a34a;
+            --accent-green: #15803d;
+        }
+
+        /* Base Styles */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--primary-bg);
+            color: var(--text-primary);
+            overflow-x: hidden;
+            transition: all 0.3s ease;
+        }
+
+        /* Layout */
+        .app {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        .header {
+            height: 64px;
+            background: var(--header-bg);
+            color: var(--text-light);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            box-shadow: 0 2px 4px var(--shadow);
+            z-index: 100;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .menu-toggle {
+            background: none;
+            border: none;
+            color: var(--text-light);
+            font-size: 24px;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 4px;
+            transition: background 0.3s;
+        }
+
+        .menu-toggle:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .logo {
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .header-center {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+        }
+
+        .mini-player {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 8px 16px;
+            border-radius: 20px;
+            transition: opacity 0.3s;
+        }
+
+        .mini-player.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .mini-player button {
+            background: none;
+            border: none;
+            color: var(--text-light);
+            font-size: 16px;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 50%;
+            transition: background 0.3s;
+        }
+
+        .mini-player button:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .track-info {
+            color: var(--text-light);
+            font-size: 14px;
+            max-width: 200px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .header-btn {
+            background: none;
+            border: none;
+            color: var(--text-light);
+            font-size: 20px;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 4px;
+            transition: background 0.3s;
+        }
+
+        .header-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        /* Main Content */
+        .main {
+            display: flex;
+            flex: 1;
+            position: relative;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 256px;
+            background: var(--sidebar-bg);
+            color: var(--text-light);
+            transform: translateX(-100%);
+            transition: transform 0.3s ease;
+            position: fixed;
+            top: 64px;
+            left: 0;
+            height: calc(100vh - 64px);
+            z-index: 90;
+            overflow-y: auto;
+        }
+
+        .sidebar.open {
+            transform: translateX(0);
+        }
+
+        .sidebar-content {
+            padding: 20px;
+        }
+
+        .mode-toggle {
+            display: flex;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 25px;
+            padding: 4px;
+            margin-bottom: 30px;
+            position: relative;
+        }
+
+        .mode-option {
+            flex: 1;
+            padding: 8px 16px;
+            text-align: center;
+            font-size: 14px;
+            cursor: pointer;
+            border-radius: 20px;
+            transition: all 0.3s;
+            position: relative;
+            z-index: 2;
+        }
+
+        .mode-option.active {
+            background: var(--accent-blue);
+            color: white;
+        }
+
+        .mode-indicator {
+            position: absolute;
+            top: 4px;
+            left: 4px;
+            width: calc(50% - 4px);
+            height: calc(100% - 8px);
+            background: var(--accent-blue);
+            border-radius: 20px;
+            transition: transform 0.3s ease;
+            z-index: 1;
+        }
+
+        .mode-indicator.personal {
+            transform: translateX(100%);
+            background: var(--accent-green);
+        }
+
+        /* Widget */
+        .widget {
+            background: var(--secondary-bg);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 2px 8px var(--shadow);
+        }
+
+        .widget-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: var(--text-primary);
+        }
+
+        .widget-content {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        /* Todo Widget */
+        .todo-input {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .todo-input input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background: var(--primary-bg);
+            color: var(--text-primary);
+            font-size: 14px;
+        }
+
+        .todo-input button {
+            padding: 10px 15px;
+            background: var(--accent-blue);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+
+        .todo-input button:hover {
+            opacity: 0.8;
+        }
+
+        .todo-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border-color);
+            transition: opacity 0.3s;
+        }
+
+        .todo-item:last-child {
+            border-bottom: none;
+        }
+
+        .todo-item.completed {
+            opacity: 0.6;
+            text-decoration: line-through;
+        }
+
+        .todo-checkbox {
+            width: 18px;
+            height: 18px;
+            border: 2px solid var(--border-color);
+            border-radius: 3px;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.3s;
+        }
+
+        .todo-checkbox.checked {
+            background: var(--accent-green);
+            border-color: var(--accent-green);
+        }
+
+        .todo-checkbox.checked::after {
+            content: '✓';
+            position: absolute;
+            top: -2px;
+            left: 1px;
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .todo-text {
+            flex: 1;
+            font-size: 14px;
+            color: var(--text-primary);
+        }
+
+        .todo-actions {
+            display: flex;
+            gap: 5px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .todo-item:hover .todo-actions {
+            opacity: 1;
+        }
+
+        .todo-actions button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 3px;
+            font-size: 12px;
+            transition: background 0.3s;
+        }
+
+        .edit-btn {
+            color: var(--accent-blue);
+        }
+
+        .delete-btn {
+            color: var(--accent-red);
+        }
+
+        .todo-actions button:hover {
+            background: var(--border-color);
+        }
+
+        /* Priority TodoList Widget */
+        .priority-input {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .priority-input input,
+        .priority-input select {
+            padding: 8px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background: var(--primary-bg);
+            color: var(--text-primary);
+            font-size: 14px;
+        }
+
+        .priority-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px;
+            border-radius: 8px;
+            border-left: 4px solid;
+            margin-bottom: 8px;
+            background: var(--primary-bg);
+        }
+
+        .priority-item.urgent {
+            border-left-color: var(--accent-red);
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        .priority-item.important {
+            border-left-color: var(--accent-yellow);
+            background: rgba(245, 158, 11, 0.1);
+        }
+
+        .priority-item.normal {
+            border-left-color: var(--accent-blue);
+            background: rgba(59, 130, 246, 0.1);
+        }
+
+        .priority-item.hobby {
+            border-left-color: var(--accent-purple);
+            background: rgba(139, 92, 246, 0.1);
+        }
+
+        .priority-item.health {
+            border-left-color: var(--accent-green);
+            background: rgba(16, 185, 129, 0.1);
+        }
+
+        .priority-badge {
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: white;
+        }
+
+        .priority-badge.urgent { background: var(--accent-red); }
+        .priority-badge.important { background: var(--accent-yellow); }
+        .priority-badge.normal { background: var(--accent-blue); }
+        .priority-badge.hobby { background: var(--accent-purple); }
+        .priority-badge.health { background: var(--accent-green); }
+
+        .priority-content {
+            flex: 1;
+        }
+
+        .priority-title {
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+
+        .priority-category {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        /* Content Area */
+        .content {
+            flex: 1;
+            padding: 20px;
+            margin-left: 0;
+            transition: margin-left 0.3s ease;
+            background: var(--primary-bg);
+        }
+
+        .content.sidebar-open {
+            margin-left: 256px;
+        }
+
+        .content.right-sidebar-open {
+            margin-right: 320px;
+        }
+
+        .main-widgets {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        /* Right Sidebar */
+        .right-sidebar {
+            width: 320px;
+            background: var(--secondary-bg);
+            border-left: 1px solid var(--border-color);
+            position: fixed;
+            top: 64px;
+            right: 0;
+            height: calc(100vh - 64px);
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+            z-index: 80;
+            overflow-y: auto;
+        }
+
+        .right-sidebar.open {
+            transform: translateX(0);
+        }
+
+        /* Bookmarks Widget */
+        .bookmarks-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+            gap: 10px;
+        }
+
+        .bookmark-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 15px 10px;
+            background: var(--primary-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-decoration: none;
+            color: var(--text-primary);
+            position: relative;
+        }
+
+        .bookmark-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px var(--shadow);
+        }
+
+        .bookmark-icon {
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+
+        .bookmark-name {
+            font-size: 12px;
+            text-align: center;
+            font-weight: 500;
+        }
+
+        .bookmark-input {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .bookmark-input input {
+            padding: 8px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background: var(--primary-bg);
+            color: var(--text-primary);
+            font-size: 14px;
+        }
+
+        .bookmark-input input.full-width {
+            grid-column: span 2;
+        }
+
+        .bookmark-actions {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .bookmark-item:hover .bookmark-actions {
+            opacity: 1;
+        }
+
+        .bookmark-actions button {
+            background: var(--accent-red);
+            color: white;
+            border: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 10px;
+            margin-left: 2px;
+        }
+
+        /* Music Player */
+        .music-player {
+            padding: 20px;
+        }
+
+        .current-track {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .track-title {
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .track-artist {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        .player-controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .player-controls button {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-primary);
+            padding: 8px;
+            border-radius: 50%;
+            transition: all 0.3s;
+        }
+
+        .player-controls button:hover {
+            background: var(--border-color);
+            transform: scale(1.1);
+        }
+
+        .play-btn {
+            font-size: 32px !important;
+            color: var(--accent-blue) !important;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: var(--border-color);
+            border-radius: 3px;
+            margin: 15px 0;
+            cursor: pointer;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--accent-blue);
+            border-radius: 3px;
+            width: 0%;
+            transition: width 0.3s;
+        }
+
+        .time-info {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-bottom: 20px;
+        }
+
+        .playlist {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .playlist-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.3s;
+            margin-bottom: 5px;
+        }
+
+        .playlist-item:hover {
+            background: var(--border-color);
+        }
+
+        .playlist-item.playing {
+            background: rgba(59, 130, 246, 0.1);
+            color: var(--accent-blue);
+        }
+
+        .track-number {
+            width: 30px;
+            text-align: center;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .playlist-item.playing .track-number {
+            color: var(--accent-blue);
+        }
+
+        .track-details {
+            flex: 1;
+            margin-left: 10px;
+        }
+
+        .playlist-track-title {
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .playlist-track-artist {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .track-duration {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .music-input {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .music-input input {
+            padding: 8px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background: var(--primary-bg);
+            color: var(--text-primary);
+            font-size: 14px;
+        }
+
+        /* Games Widget */
+        .games-menu {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+
+        .game-card {
+            padding: 20px;
+            background: var(--primary-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+        }
+
+        .game-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px var(--shadow);
+        }
+
+        .game-icon {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+
+        .game-title {
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .game-description {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .game-container {
+            text-align: center;
+        }
+
+        .game-canvas {
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+
+        .game-score {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .game-controls {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin: 20px 0;
+        }
+
+        .game-controls button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+
+        .start-btn {
+            background: var(--accent-green);
+            color: white;
+        }
+
+        .reset-btn {
+            background: var(--accent-red);
+            color: white;
+        }
+
+        .back-btn {
+            background: var(--border-color);
+            color: var(--text-primary);
+        }
+
+        .game-controls button:hover {
+            opacity: 0.8;
+        }
+
+        /* Theme Settings */
+        .theme-selector {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .theme-option {
+            padding: 15px;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.3s;
+        }
+
+        .theme-option.active {
+            border-color: var(--accent-blue);
+            background: rgba(59, 130, 246, 0.1);
+        }
+
+        .theme-option:hover {
+            transform: translateY(-1px);
+        }
+
+        /* Modal */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+
+        .modal.open {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .modal-content {
+            background: var(--primary-bg);
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            transform: scale(0.9);
+            transition: transform 0.3s;
+        }
+
+        .modal.open .modal-content {
+            transform: scale(1);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-secondary);
+            padding: 5px;
+        }
+
+        .close-btn:hover {
+            color: var(--text-primary);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1023px) {
+            .sidebar, .right-sidebar {
+                position: fixed;
+                z-index: 100;
+            }
+
+            .content.sidebar-open {
+                margin-left: 0;
+            }
+
+            .content.right-sidebar-open {
+                margin-right: 0;
+            }
+
+            .sidebar {
+                width: 280px;
+            }
+
+            .right-sidebar {
+                width: 100%;
+                max-width: 350px;
+            }
+        }
+
+        @media (max-width: 767px) {
+            .header {
+                padding: 0 15px;
+            }
+
+            .mini-player {
+                display: none;
+            }
+
+            .main-widgets {
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
+
+            .content {
+                padding: 15px;
+            }
+
+            .sidebar {
+                width: 100%;
+            }
+
+            .bookmarks-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+
+            .games-menu {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .widget {
+                padding: 15px;
+            }
+
+            .modal-content {
+                padding: 20px;
+            }
+
+            .bookmarks-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(-100%); }
+            to { transform: translateX(0); }
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        .slide-in {
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .pulse {
+            animation: pulse 1s infinite;
+        }
+
+        /* Utility Classes */
+        .hidden {
+            display: none !important;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .mt-20 {
+            margin-top: 20px;
+        }
+
+        .mb-20 {
+            margin-bottom: 20px;
+        }
+
+        .p-20 {
+            padding: 20px;
+        }
+
+        /* Loading */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid var(--border-color);
+            border-radius: 50%;
+            border-top-color: var(--accent-blue);
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body data-theme="light">
+    <div class="app">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-left">
+                <button class="menu-toggle" onclick="toggleSidebar()">
+                    <span id="menu-icon">☰</span>
+                </button>
+                <div class="logo">Personal Dashboard</div>
+            </div>
+            
+            <div class="header-center">
+                <div class="mini-player" id="miniPlayer">
+                    <button onclick="previousTrack()">⏮️</button>
+                    <button onclick="togglePlay()">
+                        <span id="playIcon">▶️</span>
+                    </button>
+                    <button onclick="nextTrack()">⏭️</button>
+                    <div class="track-info" id="miniTrackInfo">선택된 음악이 없습니다</div>
+                </div>
+            </div>
+
+            <div class="header-right">
+                <button class="header-btn" onclick="openSettings()">⚙️</button>
+                <button class="header-btn" onclick="toggleRightSidebar()">👤</button>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <div class="main">
+            <!-- Left Sidebar -->
+            <aside class="sidebar" id="leftSidebar">
+                <div class="sidebar-content">
+                    <!-- Mode Toggle -->
+                    <div class="mode-toggle">
+                        <div class="mode-indicator" id="modeIndicator"></div>
+                        <div class="mode-option active" data-mode="work" onclick="switchMode('work')">
+                            💼 업무
+                        </div>
+                        <div class="mode-option" data-mode="personal" onclick="switchMode('personal')">
+                            🏠 개인
+                        </div>
+                    </div>
+
+                    <!-- Todo Widget -->
+                    <div class="widget">
+                        <div class="widget-title">할 일 관리</div>
+                        <div class="todo-input">
+                            <input type="text" id="todoInput" placeholder="새 할 일을 입력하세요..." maxlength="100">
+                            <button onclick="addTodo()">➕</button>
+                        </div>
+                        <div class="widget-content" id="todoList"></div>
+                    </div>
+
+                    <!-- Priority TodoList Widget -->
+                    <div class="widget">
+                        <div class="widget-title">우선순위 투두리스트</div>
+                        <div class="priority-input">
+                            <input type="text" id="priorityTitle" placeholder="제목" maxlength="50">
+                            <input type="text" id="priorityCategory" placeholder="카테고리" maxlength="20">
+                            <select id="priorityLevel">
+                                <option value="normal">일반</option>
+                                <option value="important">중요</option>
+                                <option value="urgent">긴급</option>
+                                <option value="hobby" class="personal-only">취미</option>
+                                <option value="health" class="personal-only">건강</option>
+                            </select>
+                            <button onclick="addPriorityItem()" style="background: var(--accent-blue); color: white; border: none; padding: 8px; border-radius: 6px; cursor: pointer;">추가</button>
+                        </div>
+                        <div class="widget-content" id="priorityList"></div>
+                    </div>
+
+                    <!-- Games Widget (only when right sidebar is closed) -->
+                    <div class="widget" id="gamesWidget">
+                        <div class="widget-title">미니게임</div>
+                        <div class="widget-content">
+                            <div class="games-menu" id="gamesMenu">
+                                <div class="game-card" onclick="startGame('snake')">
+                                    <div class="game-icon">🐍</div>
+                                    <div class="game-title">스네이크</div>
+                                    <div class="game-description">클래식 뱀 게임</div>
+                                </div>
+                                <div class="game-card" onclick="startGame('puzzle')">
+                                    <div class="game-icon">🧩</div>
+                                    <div class="game-title">슬라이딩 퍼즐</div>
+                                    <div class="game-description">숫자 맞추기</div>
+                                </div>
+                                <div class="game-card" onclick="startGame('click')">
+                                    <div class="game-icon">🎯</div>
+                                    <div class="game-title">타겟 클릭</div>
+                                    <div class="game-description">반응속도 테스트</div>
+                                </div>
+                                <div class="game-card" onclick="startGame('dice')">
+                                    <div class="game-icon">🎲</div>
+                                    <div class="game-title">주사위</div>
+                                    <div class="game-description">운빨 게임</div>
+                                </div>
+                            </div>
+                            <div class="game-container hidden" id="gameContainer">
+                                <div id="gameArea"></div>
+                                <div class="game-controls">
+                                    <button class="back-btn" onclick="backToGamesMenu()">뒤로가기</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Content Area -->
+            <main class="content" id="mainContent">
+                <div class="main-widgets">
+                    <!-- Bookmarks Widget -->
+                    <div class="widget">
+                        <div class="widget-title">즐겨찾기</div>
+                        <div class="bookmark-input">
+                            <input type="text" id="bookmarkName" placeholder="이름">
+                            <input type="text" id="bookmarkIcon" placeholder="아이콘 (이모지)">
+                            <input type="url" id="bookmarkUrl" placeholder="URL" class="full-width">
+                            <button onclick="addBookmark()" style="background: var(--accent-blue); color: white; border: none; padding: 8px; border-radius: 6px; cursor: pointer; grid-column: span 2;">추가</button>
+                        </div>
+                        <div class="widget-content">
+                            <div class="bookmarks-grid" id="bookmarksList"></div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Stats Widget -->
+                    <div class="widget">
+                        <div class="widget-title">통계</div>
+                        <div class="widget-content">
+                            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; text-align: center;">
+                                <div style="padding: 15px; background: var(--primary-bg); border-radius: 8px; border: 1px solid var(--border-color);">
+                                    <div style="font-size: 24px; font-weight: 600; color: var(--accent-blue);" id="todoCount">0</div>
+                                    <div style="font-size: 12px; color: var(--text-secondary);">할 일</div>
+                                </div>
+                                <div style="padding: 15px; background: var(--primary-bg); border-radius: 8px; border: 1px solid var(--border-color);">
+                                    <div style="font-size: 24px; font-weight: 600; color: var(--accent-green);" id="completedCount">0</div>
+                                    <div style="font-size: 12px; color: var(--text-secondary);">완료</div>
+                                </div>
+                                <div style="padding: 15px; background: var(--primary-bg); border-radius: 8px; border: 1px solid var(--border-color);">
+                                    <div style="font-size: 24px; font-weight: 600; color: var(--accent-purple);" id="bookmarkCount">0</div>
+                                    <div style="font-size: 12px; color: var(--text-secondary);">즐겨찾기</div>
+                                </div>
+                                <div style="padding: 15px; background: var(--primary-bg); border-radius: 8px; border: 1px solid var(--border-color);">
+                                    <div style="font-size: 24px; font-weight: 600; color: var(--accent-yellow);" id="priorityCount">0</div>
+                                    <div style="font-size: 12px; color: var(--text-secondary);">우선순위</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Welcome Widget -->
+                    <div class="widget">
+                        <div class="widget-title">환영합니다! 👋</div>
+                        <div class="widget-content">
+                            <p style="color: var(--text-secondary); line-height: 1.6; margin-bottom: 15px;">
+                                Personal Dashboard Hub에 오신 것을 환영합니다. 
+                                이 대시보드를 통해 업무와 개인 생활을 효율적으로 관리하세요.
+                            </p>
+                            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                                <span style="padding: 4px 8px; background: var(--accent-blue); color: white; border-radius: 12px; font-size: 12px;">할일 관리</span>
+                                <span style="padding: 4px 8px; background: var(--accent-green); color: white; border-radius: 12px; font-size: 12px;">우선순위</span>
+                                <span style="padding: 4px 8px; background: var(--accent-purple); color: white; border-radius: 12px; font-size: 12px;">즐겨찾기</span>
+                                <span style="padding: 4px 8px; background: var(--accent-yellow); color: white; border-radius: 12px; font-size: 12px;">음악</span>
+                                <span style="padding: 4px 8px; background: var(--accent-red); color: white; border-radius: 12px; font-size: 12px;">게임</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+
+            <!-- Right Sidebar -->
+            <aside class="right-sidebar" id="rightSidebar">
+                <div class="music-player">
+                    <div class="widget-title">음악 플레이어 🎵</div>
+                    
+                    <!-- Music Input -->
+                    <div class="music-input">
+                        <input type="text" id="musicTitle" placeholder="곡 제목">
+                        <input type="text" id="musicArtist" placeholder="아티스트">
+                        <input type="url" id="musicUrl" placeholder="음악 파일 URL">
+                        <button onclick="addMusic()" style="background: var(--accent-green); color: white; border: none; padding: 8px; border-radius: 6px; cursor: pointer;">추가</button>
+                    </div>
+
+                    <!-- Current Track -->
+                    <div class="current-track">
+                        <div class="track-title" id="currentTitle">음악을 선택하세요</div>
+                        <div class="track-artist" id="currentArtist"></div>
+                    </div>
+
+                    <!-- Player Controls -->
+                    <div class="player-controls">
+                        <button onclick="shufflePlaylist()">🔀</button>
+                        <button onclick="previousTrack()">⏮️</button>
+                        <button class="play-btn" onclick="togglePlay()">
+                            <span id="playIconMain">▶️</span>
+                        </button>
+                        <button onclick="nextTrack()">⏭️</button>
+                        <button onclick="toggleRepeat()">🔁</button>
+                    </div>
+
+                    <!-- Progress Bar -->
+                    <div class="progress-bar" onclick="seekTrack(event)">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+
+                    <!-- Time Info -->
+                    <div class="time-info">
+                        <span id="currentTime">0:00</span>
+                        <span id="totalTime">0:00</span>
+                    </div>
+
+                    <!-- Volume Control -->
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px;">
+                        <span>🔊</span>
+                        <input type="range" id="volumeControl" min="0" max="1" step="0.1" value="0.7" style="flex: 1;" onchange="setVolume(this.value)">
+                    </div>
+
+                    <!-- Playlist -->
+                    <div class="widget-title">플레이리스트</div>
+                    <div class="playlist" id="playlist"></div>
+                </div>
+            </aside>
+        </div>
+
+        <!-- Settings Modal -->
+        <div class="modal" id="settingsModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div class="modal-title">설정</div>
+                    <button class="close-btn" onclick="closeSettings()">&times;</button>
+                </div>
+                
+                <div style="margin-bottom: 30px;">
+                    <h3 style="margin-bottom: 15px;">테마 선택</h3>
+                    <div class="theme-selector">
+                        <div class="theme-option active" data-theme="light" onclick="setTheme('light')">
+                            <div style="margin-bottom: 10px;">☀️</div>
+                            <div>라이트 모드</div>
+                        </div>
+                        <div class="theme-option" data-theme="dark" onclick="setTheme('dark')">
+                            <div style="margin-bottom: 10px;">🌙</div>
+                            <div>다크 모드</div>
+                        </div>
+                        <div class="theme-option" data-theme="blue" onclick="setTheme('blue')">
+                            <div style="margin-bottom: 10px;">💙</div>
+                            <div>블루 테마</div>
+                        </div>
+                        <div class="theme-option" data-theme="green" onclick="setTheme('green')">
+                            <div style="margin-bottom: 10px;">💚</div>
+                            <div>그린 테마</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 30px;">
+                    <h3 style="margin-bottom: 15px;">데이터 관리</h3>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <button onclick="exportData()" style="padding: 10px 15px; background: var(--accent-blue); color: white; border: none; border-radius: 6px; cursor: pointer;">데이터 내보내기</button>
+                        <button onclick="importData()" style="padding: 10px 15px; background: var(--accent-green); color: white; border: none; border-radius: 6px; cursor: pointer;">데이터 불러오기</button>
+                        <button onclick="clearAllData()" style="padding: 10px 15px; background: var(--accent-red); color: white; border: none; border-radius: 6px; cursor: pointer;">전체 초기화</button>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 style="margin-bottom: 15px;">정보</h3>
+                    <p style="color: var(--text-secondary); font-size: 14px; line-height: 1.6;">
+                        Personal Dashboard Hub v1.0<br>
+                        모든 데이터는 브라우저에 로컬 저장됩니다.<br>
+                        문제가 있으시면 설정에서 데이터를 초기화해주세요.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden File Input for Import -->
+    <input type="file" id="fileInput" accept=".json" style="display: none;" onchange="handleFileImport(event)">
+
+    <script>
+        // App State
+        let currentMode = 'work';
+        let sidebarOpen = false;
+        let rightSidebarOpen = true;
+        
+        // Data Storage
+        let todos = { work: [], personal: [] };
+        let priorityItems = { work: [], personal: [] };
+        let bookmarks = { work: [], personal: [] };
+        let musicPlaylist = [];
+        let currentTrack = 0;
+        let isPlaying = false;
+        let isRepeat = false;
+        let isShuffled = false;
+        let audio = new Audio();
+        let gameStates = {};
+
+        // Initialize App
+        document.addEventListener('DOMContentLoaded', function() {
+            loadData();
+            updateUI();
+            setupEventListeners();
+            updateStats();
+            
+            // Auto-open right sidebar on desktop
+            if (window.innerWidth >= 1024) {
+                rightSidebarOpen = true;
+                document.getElementById('rightSidebar').classList.add('open');
+                document.getElementById('mainContent').classList.add('right-sidebar-open');
+                updateGamesVisibility();
+            }
+        });
+
+        // Load data from localStorage
+        function loadData() {
+            const savedTodos = localStorage.getItem('personalDashboard_todos');
+            const savedPriority = localStorage.getItem('personalDashboard_priority');
+            const savedBookmarks = localStorage.getItem('personalDashboard_bookmarks');
+            const savedMusic = localStorage.getItem('personalDashboard_music');
+            const savedTheme = localStorage.getItem('personalDashboard_theme');
+            const savedMode = localStorage.getItem('personalDashboard_mode');
+
+            if (savedTodos) todos = JSON.parse(savedTodos);
+            if (savedPriority) priorityItems = JSON.parse(savedPriority);
+            if (savedBookmarks) bookmarks = JSON.parse(savedBookmarks);
+            if (savedMusic) musicPlaylist = JSON.parse(savedMusic);
+            if (savedTheme) setTheme(savedTheme, false);
+            if (savedMode) switchMode(savedMode, false);
+        }
+
+        // Save data to localStorage
+        function saveData() {
+            localStorage.setItem('personalDashboard_todos', JSON.stringify(todos));
+            localStorage.setItem('personalDashboard_priority', JSON.stringify(priorityItems));
+            localStorage.setItem('personalDashboard_bookmarks', JSON.stringify(bookmarks));
+            localStorage.setItem('personalDashboard_music', JSON.stringify(musicPlaylist));
+            localStorage.setItem('personalDashboard_mode', currentMode);
+        }
+
+        // Setup Event Listeners
+        function setupEventListeners() {
+            // Enter key for inputs
+            document.getElementById('todoInput').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') addTodo();
+            });
+
+            document.getElementById('priorityTitle').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') addPriorityItem();
+            });
+
+            // Audio events
+            audio.addEventListener('loadedmetadata', function() {
+                updateProgress();
+            });
+
+            audio.addEventListener('timeupdate', function() {
+                updateProgress();
+            });
+
+            audio.addEventListener('ended', function() {
+                if (isRepeat) {
+                    audio.currentTime = 0;
+                    audio.play();
+                } else {
+                    nextTrack();
+                }
+            });
+
+            // Responsive handling
+            window.addEventListener('resize', function() {
+                if (window.innerWidth >= 1024) {
+                    if (!rightSidebarOpen) {
+                        rightSidebarOpen = true;
+                        document.getElementById('rightSidebar').classList.add('open');
+                        document.getElementById('mainContent').classList.add('right-sidebar-open');
+                    }
+                } else {
+                    if (rightSidebarOpen) {
+                        rightSidebarOpen = false;
+                        document.getElementById('rightSidebar').classList.remove('open');
+                        document.getElementById('mainContent').classList.remove('right-sidebar-open');
+                    }
+                }
+                updateGamesVisibility();
+                updateMiniPlayerVisibility();
+            });
+        }
+
+        // Sidebar Functions
+        function toggleSidebar() {
+            sidebarOpen = !sidebarOpen;
+            const sidebar = document.getElementById('leftSidebar');
+            const content = document.getElementById('mainContent');
+            const menuIcon = document.getElementById('menu-icon');
+
+            if (sidebarOpen) {
+                sidebar.classList.add('open');
+                if (window.innerWidth >= 1024) {
+                    content.classList.add('sidebar-open');
+                }
+                menuIcon.textContent = '✕';
+                
+                // Close right sidebar on mobile
+                if (window.innerWidth < 1024 && rightSidebarOpen) {
+                    toggleRightSidebar();
+                }
+            } else {
+                sidebar.classList.remove('open');
+                content.classList.remove('sidebar-open');
+                menuIcon.textContent = '☰';
+                
+                // Open right sidebar on desktop
+                if (window.innerWidth >= 1024 && !rightSidebarOpen) {
+                    toggleRightSidebar();
+                }
+            }
+            
+            updateGamesVisibility();
+            updateMiniPlayerVisibility();
+        }
+
+        function toggleRightSidebar() {
+            rightSidebarOpen = !rightSidebarOpen;
+            const rightSidebar = document.getElementById('rightSidebar');
+            const content = document.getElementById('mainContent');
+
+            if (rightSidebarOpen) {
+                rightSidebar.classList.add('open');
+                if (window.innerWidth >= 1024) {
+                    content.classList.add('right-sidebar-open');
+                }
+                
+                // Close left sidebar on mobile
+                if (window.innerWidth < 1024 && sidebarOpen) {
+                    toggleSidebar();
+                }
+            } else {
+                rightSidebar.classList.remove('open');
+                content.classList.remove('right-sidebar-open');
+            }
+            
+            updateGamesVisibility();
+            updateMiniPlayerVisibility();
+        }
+
+        // Mode Switch Function
+        function switchMode(mode, save = true) {
+            currentMode = mode;
+            const modeIndicator = document.getElementById('modeIndicator');
+            const modeOptions = document.querySelectorAll('.mode-option');
+            const personalOptions = document.querySelectorAll('.personal-only');
+
+            // Update active mode
+            modeOptions.forEach(option => {
+                option.classList.remove('active');
+                if (option.dataset.mode === mode) {
+                    option.classList.add('active');
+                }
+            });
+
+            // Move indicator
+            if (mode === 'personal') {
+                modeIndicator.classList.add('personal');
+            } else {
+                modeIndicator.classList.remove('personal');
+            }
+
+            // Show/hide personal mode options
+            personalOptions.forEach(option => {
+                option.style.display = mode === 'personal' ? 'block' : 'none';
+            });
+
+            updateUI();
+            updateStats();
+            
+            if (save) {
+                saveData();
+            }
+        }
+
+        // Update UI based on current mode
+        function updateUI() {
+            renderTodos();
+            renderPriorityItems();
+            renderBookmarks();
+            renderPlaylist();
+        }
+
+        // Games visibility
+        function updateGamesVisibility() {
+            const gamesWidget = document.getElementById('gamesWidget');
+            const shouldShow = !sidebarOpen && !rightSidebarOpen;
+            gamesWidget.style.display = shouldShow ? 'block' : 'none';
+        }
+
+        // Mini player visibility
+        function updateMiniPlayerVisibility() {
+            const miniPlayer = document.getElementById('miniPlayer');
+            const shouldShow = sidebarOpen && !rightSidebarOpen;
+            miniPlayer.classList.toggle('hidden', !shouldShow);
+        }
+
+        // Todo Functions
+        function addTodo() {
+            const input = document.getElementById('todoInput');
+            const text = input.value.trim();
+            
+            if (text) {
+                const todo = {
+                    id: Date.now(),
+                    text: text,
+                    completed: false,
+                    createdAt: new Date().toISOString()
+                };
+                
+                todos[currentMode].push(todo);
+                input.value = '';
+                renderTodos();
+                updateStats();
+                saveData();
+            }
+        }
+
+        function toggleTodo(id) {
+            const todoList = todos[currentMode];
+            const todo = todoList.find(t => t.id === id);
+            if (todo) {
+                todo.completed = !todo.completed;
+                renderTodos();
+                updateStats();
+                saveData();
+            }
+        }
+
+        function deleteTodo(id) {
+            if (confirm('이 할 일을 삭제하시겠습니까?')) {
+                todos[currentMode] = todos[currentMode].filter(t => t.id !== id);
+                renderTodos();
+                updateStats();
+                saveData();
+            }
+        }
+
+        function editTodo(id) {
+            const todoList = todos[currentMode];
+            const todo = todoList.find(t => t.id === id);
+            if (todo) {
+                const newText = prompt('할 일을 수정하세요:', todo.text);
+                if (newText !== null && newText.trim()) {
+                    todo.text = newText.trim();
+                    renderTodos();
+                    saveData();
+                }
+            }
+        }
+
+        function renderTodos() {
+            const container = document.getElementById('todoList');
+            const todoList = todos[currentMode] || [];
+            
+            container.innerHTML = todoList.map(todo => `
+                <div class="todo-item ${todo.completed ? 'completed' : ''}">
+                    <div class="todo-checkbox ${todo.completed ? 'checked' : ''}" 
+                         onclick="toggleTodo(${todo.id})"></div>
+                    <div class="todo-text">${todo.text}</div>
+                    <div class="todo-actions">
+                        <button class="edit-btn" onclick="editTodo(${todo.id})">✏️</button>
+                        <button class="delete-btn" onclick="deleteTodo(${todo.id})">🗑️</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Priority Todo Functions
+        function addPriorityItem() {
+            const title = document.getElementById('priorityTitle').value.trim();
+            const category = document.getElementById('priorityCategory').value.trim();
+            const priority = document.getElementById('priorityLevel').value;
+            
+            if (title) {
+                const item = {
+                    id: Date.now(),
+                    title: title,
+                    category: category || '일반',
+                    priority: priority,
+                    createdAt: new Date().toISOString()
+                };
+                
+                priorityItems[currentMode].push(item);
+                document.getElementById('priorityTitle').value = '';
+                document.getElementById('priorityCategory').value = '';
+                document.getElementById('priorityLevel').value = 'normal';
+                renderPriorityItems();
+                updateStats();
+                saveData();
+            }
+        }
+
+        function deletePriorityItem(id) {
+            if (confirm('이 항목을 삭제하시겠습니까?')) {
+                priorityItems[currentMode] = priorityItems[currentMode].filter(item => item.id !== id);
+                renderPriorityItems();
+                updateStats();
+                saveData();
+            }
+        }
+
+        function renderPriorityItems() {
+            const container = document.getElementById('priorityList');
+            const items = priorityItems[currentMode] || [];
+            
+            const priorityOrder = { urgent: 0, important: 1, normal: 2, hobby: 3, health: 4 };
+            const sortedItems = items.sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]);
+            
+            container.innerHTML = sortedItems.map(item => `
+                <div class="priority-item ${item.priority}">
+                    <div class="priority-badge ${item.priority}">${item.priority}</div>
+                    <div class="priority-content">
+                        <div class="priority-title">${item.title}</div>
+                        <div class="priority-category">${item.category}</div>
+                    </div>
+                    <div class="todo-actions">
+                        <button class="delete-btn" onclick="deletePriorityItem(${item.id})">🗑️</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Bookmark Functions
+        function addBookmark() {
+            const name = document.getElementById('bookmarkName').value.trim();
+            const icon = document.getElementById('bookmarkIcon').value.trim();
+            const url = document.getElementById('bookmarkUrl').value.trim();
+            
+            if (name && url) {
+                const bookmark = {
+                    id: Date.now(),
+                    name: name,
+                    icon: icon || '🔗',
+                    url: url,
+                    clickCount: 0,
+                    createdAt: new Date().toISOString()
+                };
+                
+                bookmarks[currentMode].push(bookmark);
+                document.getElementById('bookmarkName').value = '';
+                document.getElementById('bookmarkIcon').value = '';
+                document.getElementById('bookmarkUrl').value = '';
+                renderBookmarks();
+                updateStats();
+                saveData();
+            }
+        }
+
+        function deleteBookmark(id) {
+            if (confirm('이 즐겨찾기를 삭제하시겠습니까?')) {
+                bookmarks[currentMode] = bookmarks[currentMode].filter(b => b.id !== id);
+                renderBookmarks();
+                updateStats();
+                saveData();
+            }
+        }
+
+        function openBookmark(id) {
+            const bookmark = bookmarks[currentMode].find(b => b.id === id);
+            if (bookmark) {
+                bookmark.clickCount++;
+                window.open(bookmark.url, '_blank');
+                saveData();
+            }
+        }
+
+        function renderBookmarks() {
+            const container = document.getElementById('bookmarksList');
+            const bookmarkList = bookmarks[currentMode] || [];
+            
+            container.innerHTML = bookmarkList.map(bookmark => `
+                <div class="bookmark-item" onclick="openBookmark(${bookmark.id})">
+                    <div class="bookmark-icon">${bookmark.icon}</div>
+                    <div class="bookmark-name">${bookmark.name}</div>
+                    <div class="bookmark-actions" onclick="event.stopPropagation()">
+                        <button onclick="deleteBookmark(${bookmark.id})">×</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Music Player Functions
+        function addMusic() {
+            const title = document.getElementById('musicTitle').value.trim();
+            const artist = document.getElementById('musicArtist').value.trim();
+            const url = document.getElementById('musicUrl').value.trim();
+            
+            if (title && artist && url) {
+                const track = {
+                    id: Date.now(),
+                    title: title,
+                    artist: artist,
+                    url: url,
+                    duration: 0,
+                    addedAt: new Date().toISOString()
+                };
+                
+                musicPlaylist.push(track);
+                document.getElementById('musicTitle').value = '';
+                document.getElementById('musicArtist').value = '';
+                document.getElementById('musicUrl').value = '';
+                renderPlaylist();
+                saveData();
+            }
+        }
+
+        function playTrack(index) {
+            currentTrack = index;
+            const track = musicPlaylist[currentTrack];
+            if (track) {
+                audio.src = track.url;
+                audio.load();
+                updateCurrentTrackInfo();
+                renderPlaylist();
+                
+                if (isPlaying) {
+                    audio.play();
+                }
+            }
+        }
+
+        function togglePlay() {
+            if (musicPlaylist.length === 0) {
+                alert('재생할 음악이 없습니다. 먼저 음악을 추가해주세요.');
+                return;
+            }
+
+            if (!audio.src && musicPlaylist.length > 0) {
+                playTrack(0);
+            }
+
+            if (isPlaying) {
+                audio.pause();
+                isPlaying = false;
+                document.getElementById('playIcon').textContent = '▶️';
+                document.getElementById('playIconMain').textContent = '▶️';
+            } else {
+                audio.play();
+                isPlaying = true;
+                document.getElementById('playIcon').textContent = '⏸️';
+                document.getElementById('playIconMain').textContent = '⏸️';
+            }
+        }
+
+        function nextTrack() {
+            if (musicPlaylist.length === 0) return;
+            
+            if (isShuffled) {
+                currentTrack = Math.floor(Math.random() * musicPlaylist.length);
+            } else {
+                currentTrack = (currentTrack + 1) % musicPlaylist.length;
+            }
+            playTrack(currentTrack);
+        }
+
+        function previousTrack() {
+            if (musicPlaylist.length === 0) return;
+            
+            if (isShuffled) {
+                currentTrack = Math.floor(Math.random() * musicPlaylist.length);
+            } else {
+                currentTrack = currentTrack === 0 ? musicPlaylist.length - 1 : currentTrack - 1;
+            }
+            playTrack(currentTrack);
+        }
+
+        function shufflePlaylist() {
+            isShuffled = !isShuffled;
+            const shuffleBtn = document.querySelector('.player-controls button');
+            shuffleBtn.style.color = isShuffled ? 'var(--accent-blue)' : 'var(--text-primary)';
+        }
+
+        function toggleRepeat() {
+            isRepeat = !isRepeat;
+            const repeatBtn = document.querySelector('.player-controls button:last-child');
+            repeatBtn.style.color = isRepeat ? 'var(--accent-blue)' : 'var(--text-primary)';
+        }
+
+        function setVolume(value) {
+            audio.volume = value;
+        }
+
+        function seekTrack(event) {
+            if (audio.duration) {
+                const progressBar = event.currentTarget;
+                const clickX = event.offsetX;
+                const width = progressBar.offsetWidth;
+                const seekTime = (clickX / width) * audio.duration;
+                audio.currentTime = seekTime;
+            }
+        }
+
+        function updateProgress() {
+            if (audio.duration) {
+                const progress = (audio.currentTime / audio.duration) * 100;
+                document.getElementById('progressFill').style.width = progress + '%';
+                
+                document.getElementById('currentTime').textContent = formatTime(audio.currentTime);
+                document.getElementById('totalTime').textContent = formatTime(audio.duration);
+            }
+        }
+
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return mins + ':' + (secs < 10 ? '0' : '') + secs;
+        }
+
+        function updateCurrentTrackInfo() {
+            const track = musicPlaylist[currentTrack];
+            if (track) {
+                document.getElementById('currentTitle').textContent = track.title;
+                document.getElementById('currentArtist').textContent = track.artist;
+                document.getElementById('miniTrackInfo').textContent = `${track.title} - ${track.artist}`;
+            } else {
+                document.getElementById('currentTitle').textContent = '음악을 선택하세요';
+                document.getElementById('currentArtist').textContent = '';
+                document.getElementById('miniTrackInfo').textContent = '선택된 음악이 없습니다';
+            }
+        }
+
+        function deleteTrack(id) {
+            if (confirm('이 음악을 삭제하시겠습니까?')) {
+                const index = musicPlaylist.findIndex(track => track.id === id);
+                if (index !== -1) {
+                    musicPlaylist.splice(index, 1);
+                    if (currentTrack >= index) {
+                        currentTrack = Math.max(0, currentTrack - 1);
+                    }
+                    if (musicPlaylist.length === 0) {
+                        audio.pause();
+                        audio.src = '';
+                        isPlaying = false;
+                        currentTrack = 0;
+                        document.getElementById('playIcon').textContent = '▶️';
+                        document.getElementById('playIconMain').textContent = '▶️';
+                    }
+                    renderPlaylist();
+                    updateCurrentTrackInfo();
+                    saveData();
+                }
+            }
+        }
+
+        function renderPlaylist() {
+            const container = document.getElementById('playlist');
+            
+            container.innerHTML = musicPlaylist.map((track, index) => `
+                <div class="playlist-item ${index === currentTrack ? 'playing' : ''}" onclick="playTrack(${index})">
+                    <div class="track-number">${index === currentTrack ? '♪' : index + 1}</div>
+                    <div class="track-details">
+                        <div class="playlist-track-title">${track.title}</div>
+                        <div class="playlist-track-artist">${track.artist}</div>
+                    </div>
+                    <div class="track-duration">
+                        <button onclick="event.stopPropagation(); deleteTrack(${track.id})" 
+                                style="background: var(--accent-red); color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 10px; cursor: pointer;">×</button>
+                    </div>
+                </div>
+            `).join('');
+            
+            updateCurrentTrackInfo();
+        }
+
+        // Game Functions
+        function startGame(gameType) {
+            document.getElementById('gamesMenu').classList.add('hidden');
+            document.getElementById('gameContainer').classList.remove('hidden');
+            
+            const gameArea = document.getElementById('gameArea');
+            gameArea.innerHTML = '';
+            
+            switch(gameType) {
+                case 'snake':
+                    initSnakeGame(gameArea);
+                    break;
+                case 'puzzle':
+                    initPuzzleGame(gameArea);
+                    break;
+                case 'click':
+                    initClickGame(gameArea);
+                    break;
+                case 'dice':
+                    initDiceGame(gameArea);
+                    break;
+            }
+        }
+
+        function backToGamesMenu() {
+            document.getElementById('gamesMenu').classList.remove('hidden');
+            document.getElementById('gameContainer').classList.add('hidden');
+            
+            // Stop any running games
+            if (gameStates.snakeInterval) {
+                clearInterval(gameStates.snakeInterval);
+            }
+            if (gameStates.clickTimeout) {
+                clearTimeout(gameStates.clickTimeout);
+            }
+        }
+
+        // Snake Game
+        function initSnakeGame(container) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 300;
+            canvas.height = 300;
+            canvas.className = 'game-canvas';
+            
+            const scoreDiv = document.createElement('div');
+            scoreDiv.className = 'game-score';
+            scoreDiv.textContent = '점수: 0';
+            
+            const controls = document.createElement('div');
+            controls.className = 'game-controls';
+            controls.innerHTML = `
+                <button class="start-btn" onclick="startSnake()">시작</button>
+                <button class="reset-btn" onclick="resetSnake()">리셋</button>
+            `;
+            
+            container.appendChild(scoreDiv);
+            container.appendChild(canvas);
+            container.appendChild(controls);
+            
+            gameStates.snake = {
+                canvas: canvas,
+                ctx: canvas.getContext('2d'),
+                snake: [{x: 150, y: 150}],
+                food: {x: 90, y: 90},
+                dx: 10,
+                dy: 0,
+                score: 0,
+                scoreDiv: scoreDiv,
+                running: false
+            };
+            
+            // Controls
+            document.addEventListener('keydown', function(e) {
+                if (!gameStates.snake || !gameStates.snake.running) return;
+                
+                const key = e.key;
+                const state = gameStates.snake;
+                
+                if (key === 'ArrowUp' && state.dy === 0) {
+                    state.dx = 0; state.dy = -10;
+                } else if (key === 'ArrowDown' && state.dy === 0) {
+                    state.dx = 0; state.dy = 10;
+                } else if (key === 'ArrowLeft' && state.dx === 0) {
+                    state.dx = -10; state.dy = 0;
+                } else if (key === 'ArrowRight' && state.dx === 0) {
+                    state.dx = 10; state.dy = 0;
+                }
+            });
+        }
+
+        function startSnake() {
+            if (gameStates.snakeInterval) clearInterval(gameStates.snakeInterval);
+            
+            const state = gameStates.snake;
+            state.running = true;
+            
+            gameStates.snakeInterval = setInterval(() => {
+                if (!state.running) return;
+                
+                // Move snake
+                const head = {x: state.snake[0].x + state.dx, y: state.snake[0].y + state.dy};
+                
+                // Check collision with walls
+                if (head.x < 0 || head.x >= 300 || head.y < 0 || head.y >= 300) {
+                    gameOver();
+                    return;
+                }
+                
+                // Check collision with self
+                if (state.snake.some(segment => segment.x === head.x && segment.y === head.y)) {
+                    gameOver();
+                    return;
+                }
+                
+                state.snake.unshift(head);
+                
+                // Check food collision
+                if (head.x === state.food.x && head.y === state.food.y) {
+                    state.score += 10;
+                    state.scoreDiv.textContent = '점수: ' + state.score;
+                    generateFood();
+                } else {
+                    state.snake.pop();
+                }
+                
+                drawSnake();
+            }, 100);
+            
+            function gameOver() {
+                state.running = false;
+                clearInterval(gameStates.snakeInterval);
+                alert('게임 오버! 점수: ' + state.score);
+            }
+            
+            function generateFood() {
+                state.food = {
+                    x: Math.floor(Math.random() * 30) * 10,
+                    y: Math.floor(Math.random() * 30) * 10
+                };
+            }
+            
+            function drawSnake() {
+                const ctx = state.ctx;
+                ctx.clearRect(0, 0, 300, 300);
+                
+                // Draw snake
+                ctx.fillStyle = 'var(--accent-green)';
+                state.snake.forEach(segment => {
+                    ctx.fillRect(segment.x, segment.y, 10, 10);
+                });
+                
+                // Draw food
+                ctx.fillStyle = 'var(--accent-red)';
+                ctx.fillRect(state.food.x, state.food.y, 10, 10);
+            }
+            
+            drawSnake();
+        }
+
+        function resetSnake() {
+            if (gameStates.snakeInterval) {
+                clearInterval(gameStates.snakeInterval);
+            }
+            
+            gameStates.snake.snake = [{x: 150, y: 150}];
+            gameStates.snake.food = {x: 90, y: 90};
+            gameStates.snake.dx = 10;
+            gameStates.snake.dy = 0;
+            gameStates.snake.score = 0;
+            gameStates.snake.running = false;
+            gameStates.snake.scoreDiv.textContent = '점수: 0';
+            
+            const ctx = gameStates.snake.ctx;
+            ctx.clearRect(0, 0, 300, 300);
+        }
+
+        // Puzzle Game
+        function initPuzzleGame(container) {
+            const puzzleDiv = document.createElement('div');
+            puzzleDiv.style.cssText = `
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 2px;
+                width: 300px;
+                height: 300px;
+                margin: 20px auto;
+                background: var(--border-color);
+                border-radius: 8px;
+                padding: 10px;
+            `;
+            
+            const scoreDiv = document.createElement('div');
+            scoreDiv.className = 'game-score';
+            scoreDiv.textContent = '이동 횟수: 0';
+            
+            const controls = document.createElement('div');
+            controls.className = 'game-controls';
+            controls.innerHTML = `
+                <button class="start-btn" onclick="shufflePuzzle()">섞기</button>
+                <button class="reset-btn" onclick="resetPuzzle()">리셋</button>
+            `;
+            
+            container.appendChild(scoreDiv);
+            container.appendChild(puzzleDiv);
+            container.appendChild(controls);
+            
+            gameStates.puzzle = {
+                container: puzzleDiv,
+                tiles: [1,2,3,4,5,6,7,8,0],
+                moves: 0,
+                scoreDiv: scoreDiv
+            };
+            
+            renderPuzzle();
+        }
+
+        function renderPuzzle() {
+            const state = gameStates.puzzle;
+            state.container.innerHTML = '';
+            
+            state.tiles.forEach((tile, index) => {
+                const tileDiv = document.createElement('div');
+                tileDiv.style.cssText = `
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    background: ${tile === 0 ? 'transparent' : 'var(--accent-blue)'};
+                    color: white;
+                    font-size: 24px;
+                    font-weight: bold;
+                    cursor: ${tile === 0 ? 'default' : 'pointer'};
+                    border-radius: 6px;
+                    transition: all 0.3s;
+                `;
+                
+                if (tile !== 0) {
+                    tileDiv.textContent = tile;
+                    tileDiv.onclick = () => moveTile(index);
+                    tileDiv.onmouseover = () => {
+                        if (canMoveTile(index)) {
+                            tileDiv.style.background = 'var(--accent-green)';
+                        }
+                    };
+                    tileDiv.onmouseout = () => {
+                        tileDiv.style.background = 'var(--accent-blue)';
+                    };
+                }
+                
+                state.container.appendChild(tileDiv);
+            });
+        }
+
+        function canMoveTile(index) {
+            const state = gameStates.puzzle;
+            const emptyIndex = state.tiles.indexOf(0);
+            
+            // Check if tiles are adjacent
+            const row = Math.floor(index / 3);
+            const col = index % 3;
+            const emptyRow = Math.floor(emptyIndex / 3);
+            const emptyCol = emptyIndex % 3;
+            
+            return (Math.abs(row - emptyRow) + Math.abs(col - emptyCol)) === 1;
+        }
+
+        function moveTile(index) {
+            const state = gameStates.puzzle;
+            
+            if (canMoveTile(index)) {
+                const emptyIndex = state.tiles.indexOf(0);
+                
+                // Swap tiles
+                [state.tiles[index], state.tiles[emptyIndex]] = [state.tiles[emptyIndex], state.tiles[index]];
+                
+                state.moves++;
+                state.scoreDiv.textContent = '이동 횟수: ' + state.moves;
+                
+                renderPuzzle();
+                
+                // Check win condition
+                if (state.tiles.join('') === '123456780') {
+                    setTimeout(() => {
+                        alert('축하합니다! ' + state.moves + '번만에 완성했습니다!');
+                    }, 100);
+                }
+            }
+        }
+
+        function shufflePuzzle() {
+            const state = gameStates.puzzle;
+            
+            // Shuffle the array
+            for (let i = 0; i < 1000; i++) {
+                const validMoves = [];
+                const emptyIndex = state.tiles.indexOf(0);
+                
+                // Find valid moves
+                for (let j = 0; j < 9; j++) {
+                    if (canMoveTile(j)) {
+                        validMoves.push(j);
+                    }
+                }
+                
+                if (validMoves.length > 0) {
+                    const randomMove = validMoves[Math.floor(Math.random() * validMoves.length)];
+                    [state.tiles[randomMove], state.tiles[emptyIndex]] = [state.tiles[emptyIndex], state.tiles[randomMove]];
+                }
+            }
+            
+            state.moves = 0;
+            state.scoreDiv.textContent = '이동 횟수: 0';
+            renderPuzzle();
+        }
+
+        function resetPuzzle() {
+            const state = gameStates.puzzle;
+            state.tiles = [1,2,3,4,5,6,7,8,0];
+            state.moves = 0;
+            state.scoreDiv.textContent = '이동 횟수: 0';
+            renderPuzzle();
+        }
+
+        // Click Game
+        function initClickGame(container) {
+            const gameArea = document.createElement('div');
+            gameArea.style.cssText = `
+                width: 300px;
+                height: 300px;
+                margin: 20px auto;
+                background: var(--secondary-bg);
+                border: 2px solid var(--border-color);
+                border-radius: 8px;
+                position: relative;
+                cursor: crosshair;
+            `;
+            
+            const scoreDiv = document.createElement('div');
+            scoreDiv.className = 'game-score';
+            scoreDiv.textContent = '반응 시간: --ms';
+            
+            const controls = document.createElement('div');
+            controls.className = 'game-controls';
+            controls.innerHTML = `
+                <button class="start-btn" onclick="startClickGame()">시작</button>
+                <button class="reset-btn" onclick="resetClickGame()">리셋</button>
+            `;
+            
+            container.appendChild(scoreDiv);
+            container.appendChild(gameArea);
+            container.appendChild(controls);
+            
+            gameStates.click = {
+                container: gameArea,
+                scoreDiv: scoreDiv,
+                startTime: 0,
+                clicks: 0,
+                totalTime: 0,
+                running: false
+            };
+        }
+
+        function startClickGame() {
+            const state = gameStates.click;
+            state.running = true;
+            state.clicks = 0;
+            state.totalTime = 0;
+            
+            showTarget();
+            
+            function showTarget() {
+                if (!state.running || state.clicks >= 10) {
+                    if (state.clicks >= 10) {
+                        const avgTime = Math.round(state.totalTime / state.clicks);
+                        alert(`게임 완료! 평균 반응 시간: ${avgTime}ms`);
+                    }
+                    return;
+                }
+                
+                state.container.innerHTML = '';
+                
+                gameStates.clickTimeout = setTimeout(() => {
+                    if (!state.running) return;
+                    
+                    const target = document.createElement('div');
+                    target.style.cssText = `
+                        width: 30px;
+                        height: 30px;
+                        background: var(--accent-red);
+                        border-radius: 50%;
+                        position: absolute;
+                        cursor: pointer;
+                    `;
+                    
+                    const maxX = 270;
+                    const maxY = 270;
+                    target.style.left = Math.random() * maxX + 'px';
+                    target.style.top = Math.random() * maxY + 'px';
+                    
+                    state.startTime = Date.now();
+                    
+                    target.onclick = () => {
+                        const reactionTime = Date.now() - state.startTime;
+                        state.clicks++;
+                        state.totalTime += reactionTime;
+                        
+                        state.scoreDiv.textContent = `클릭: ${state.clicks}/10 | 반응 시간: ${reactionTime}ms`;
+                        
+                        state.container.innerHTML = '';
+                        setTimeout(showTarget, 500);
+                    };
+                    
+                    state.container.appendChild(target);
+                }, Math.random() * 3000 + 1000);
+            }
+        }
+
+        function resetClickGame() {
+            const state = gameStates.click;
+            state.running = false;
+            state.clicks = 0;
+            state.totalTime = 0;
+            state.container.innerHTML = '';
+            state.scoreDiv.textContent = '반응 시간: --ms';
+            
+            if (gameStates.clickTimeout) {
+                clearTimeout(gameStates.clickTimeout);
+            }
+        }
+
+        // Dice Game
+        function initDiceGame(container) {
+            const diceDiv = document.createElement('div');
+            diceDiv.style.cssText = `
+                display: flex;
+                justify-content: center;
+                gap: 20px;
+                margin: 20px 0;
+            `;
+            
+            for (let i = 0; i < 2; i++) {
+                const dice = document.createElement('div');
+                dice.style.cssText = `
+                    width: 80px;
+                    height: 80px;
+                    background: var(--primary-bg);
+                    border: 2px solid var(--border-color);
+                    border-radius: 12px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 36px;
+                    font-weight: bold;
+                `;
+                dice.textContent = '?';
+                diceDiv.appendChild(dice);
+            }
+            
+            const resultDiv = document.createElement('div');
+            resultDiv.className = 'game-score';
+            resultDiv.textContent = '주사위를 굴려보세요!';
+            
+            const statsDiv = document.createElement('div');
+            statsDiv.style.cssText = `
+                text-align: center;
+                margin: 20px 0;
+                font-size: 14px;
+                color: var(--text-secondary);
+            `;
+            statsDiv.textContent = '게임 횟수: 0 | 승률: --%';
+            
+            const controls = document.createElement('div');
+            controls.className = 'game-controls';
+            controls.innerHTML = `
+                <button class="start-btn" onclick="rollDice()">주사위 굴리기</button>
+                <button class="reset-btn" onclick="resetDice()">통계 리셋</button>
+            `;
+            
+            container.appendChild(resultDiv);
+            container.appendChild(diceDiv);
+            container.appendChild(statsDiv);
+            container.appendChild(controls);
+            
+            gameStates.dice = {
+                dices: diceDiv.children,
+                resultDiv: resultDiv,
+                statsDiv: statsDiv,
+                games: 0,
+                wins: 0
+            };
+        }
+
+        function rollDice() {
+            const state = gameStates.dice;
+            
+            // Animation
+            let rolls = 0;
+            const rollInterval = setInterval(() => {
+                Array.from(state.dices).forEach(dice => {
+                    dice.textContent = Math.floor(Math.random() * 6) + 1;
+                });
+                
+                rolls++;
+                if (rolls > 10) {
+                    clearInterval(rollInterval);
+                    
+                    // Final result
+                    const dice1 = Math.floor(Math.random() * 6) + 1;
+                    const dice2 = Math.floor(Math.random() * 6) + 1;
+                    const sum = dice1 + dice2;
+                    
+                    state.dices[0].textContent = dice1;
+                    state.dices[1].textContent = dice2;
+                    
+                    state.games++;
+                    
+                    let result = '';
+                    if (sum === 7 || sum === 11) {
+                        result = '승리! 🎉';
+                        state.wins++;
+                    } else if (sum === 2 || sum === 3 || sum === 12) {
+                        result = '패배! 😢';
+                    } else {
+                        result = '무승부! 😐';
+                    }
+                    
+                    state.resultDiv.textContent = `${dice1} + ${dice2} = ${sum} | ${result}`;
+                    
+                    const winRate = state.games > 0 ? Math.round((state.wins / state.games) * 100) : 0;
+                    state.statsDiv.textContent = `게임 횟수: ${state.games} | 승률: ${winRate}%`;
+                }
+            }, 100);
+        }
+
+        function resetDice() {
+            const state = gameStates.dice;
+            state.games = 0;
+            state.wins = 0;
+            state.resultDiv.textContent = '주사위를 굴려보세요!';
+            state.statsDiv.textContent = '게임 횟수: 0 | 승률: --%';
+            
+            Array.from(state.dices).forEach(dice => {
+                dice.textContent = '?';
+            });
+        }
+
+        // Settings Functions
+        function openSettings() {
+            document.getElementById('settingsModal').classList.add('open');
+        }
+
+        function closeSettings() {
+            document.getElementById('settingsModal').classList.remove('open');
+        }
+
+        function setTheme(theme, save = true) {
+            document.body.setAttribute('data-theme', theme);
+            
+            // Update active theme option
+            document.querySelectorAll('.theme-option').forEach(option => {
+                option.classList.remove('active');
+                if (option.dataset.theme === theme) {
+                    option.classList.add('active');
+                }
+            });
+            
+            if (save) {
+                localStorage.setItem('personalDashboard_theme', theme);
+            }
+        }
+
+        // Data Management
+        function exportData() {
+            const data = {
+                todos: todos,
+                priorityItems: priorityItems,
+                bookmarks: bookmarks,
+                musicPlaylist: musicPlaylist,
+                currentMode: currentMode,
+                exportDate: new Date().toISOString()
+            };
+            
+            const dataStr = JSON.stringify(data, null, 2);
+            const dataBlob = new Blob([dataStr], {type: 'application/json'});
+            
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(dataBlob);
+            link.download = 'personal-dashboard-backup.json';
+            link.click();
+        }
+
+        function importData() {
+            document.getElementById('fileInput').click();
+        }
+
+        function handleFileImport(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const data = JSON.parse(e.target.result);
+                        
+                        if (confirm('데이터를 불러오면 현재 데이터가 모두 교체됩니다. 계속하시겠습니까?')) {
+                            todos = data.todos || { work: [], personal: [] };
+                            priorityItems = data.priorityItems || { work: [], personal: [] };
+                            bookmarks = data.bookmarks || { work: [], personal: [] };
+                            musicPlaylist = data.musicPlaylist || [];
+                            
+                            if (data.currentMode) {
+                                switchMode(data.currentMode);
+                            }
+                            
+                            updateUI();
+                            updateStats();
+                            saveData();
+                            
+                            alert('데이터를 성공적으로 불러왔습니다!');
+                        }
+                    } catch (error) {
+                        alert('파일 형식이 올바르지 않습니다.');
+                    }
+                };
+                reader.readAsText(file);
+            }
+        }
+
+        function clearAllData() {
+            if (confirm('모든 데이터를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) {
+                if (confirm('정말로 모든 데이터를 삭제하시겠습니까?')) {
+                    localStorage.clear();
+                    todos = { work: [], personal: [] };
+                    priorityItems = { work: [], personal: [] };
+                    bookmarks = { work: [], personal: [] };
+                    musicPlaylist = [];
+                    currentTrack = 0;
+                    isPlaying = false;
+                    audio.pause();
+                    audio.src = '';
+                    
+                    updateUI();
+                    updateStats();
+                    
+                    alert('모든 데이터가 삭제되었습니다.');
+                }
+            }
+        }
+
+        // Update Statistics
+        function updateStats() {
+            const currentTodos = todos[currentMode] || [];
+            const currentPriority = priorityItems[currentMode] || [];
+            const currentBookmarks = bookmarks[currentMode] || [];
+            
+            const totalTodos = currentTodos.length;
+            const completedTodos = currentTodos.filter(todo => todo.completed).length;
+            
+            document.getElementById('todoCount').textContent = totalTodos - completedTodos;
+            document.getElementById('completedCount').textContent = completedTodos;
+            document.getElementById('bookmarkCount').textContent = currentBookmarks.length;
+            document.getElementById('priorityCount').textContent = currentPriority.length;
+        }
+
+        // Close modal when clicking outside
+        document.addEventListener('click', function(event) {
+            const modal = document.getElementById('settingsModal');
+            if (event.target === modal) {
+                closeSettings();
+            }
+        });
+
+        // Escape key to close modal
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                closeSettings();
+            }
+        });
+    </script>
 </body>
 </html>
